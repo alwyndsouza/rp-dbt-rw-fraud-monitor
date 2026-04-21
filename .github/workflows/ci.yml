@@ -1,0 +1,363 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "claude/**", "feature/**"]
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.4.4"
+
+jobs:
+  # ── 1. Lint & Format ────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Create venv
+        working-directory: producers
+        run: uv venv
+
+      - name: Install dev dependencies
+        working-directory: producers
+        run: uv pip install ruff
+
+      - name: Ruff lint
+        working-directory: producers
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        working-directory: producers
+        run: uv run ruff format --check .
+
+  # ── 2. Unit Tests ───────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Create venv
+        working-directory: producers
+        run: uv venv
+
+      - name: Install dependencies
+        working-directory: producers
+        run: |
+          uv pip install \
+            faker>=24.11.0 \
+            pydantic>=2.7.1 \
+            geopy>=2.4.1 \
+            pytest>=8.2.0 \
+            pytest-mock>=3.14.0
+
+      - name: Run tests
+        working-directory: producers
+        run: uv run python -m pytest tests/ -v --tb=short --color=yes
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-py${{ matrix.python-version }}
+          path: producers/.pytest_cache/
+
+  # ── 3. Docker Build ─────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build producer image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./producers
+          push: false
+          tags: fraud-detection-producer:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 4. SQL Validation ───────────────────────────────────────────────────────
+  sql-validate:
+    name: SQL Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Create venv
+        working-directory: producers
+        run: uv venv
+
+      - name: Install sqlfluff
+        working-directory: producers
+        run: uv pip install sqlfluff==3.0.7
+
+      - name: Lint SQL files
+        working-directory: producers
+        run: uv run sqlfluff lint ../sql/
+
+  # ── 5. Compose Config Validation ────────────────────────────────────────────
+  compose-validate:
+    name: Compose Config Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Validate docker-compose config
+        run: docker compose config --quiet
+
+  # ── 6. End-to-End Integration Test ─────────────────────────────────────────
+  e2e:
+    name: End-to-End Integration Test
+    runs-on: ubuntu-latest
+    # Only run on push to main or PRs — skip on feature branches to save time
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    needs: [lint, test, docker-build]
+    timeout-minutes: 20
+
+    env:
+      # Longer warm-up than the fastest tumble windows so every signal has a
+      # real chance to fire at least once before assertions start polling.
+      WARMUP_SECONDS: "180"
+      # Each assertion polls up to this many seconds waiting for the target
+      # row count — prevents flakiness from RisingWave MV refresh cadence.
+      ASSERT_TIMEOUT: "180"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Start services
+        run: docker compose up -d --build
+
+      - name: Wait for RisingWave to be ready
+        run: |
+          echo "Waiting for RisingWave SQL endpoint..."
+          timeout 180 bash -c '
+            until docker run --rm --network fraud-detection-streaming_fraud-net \
+              -e PGPASSWORD="" postgres:15-alpine \
+              psql -h risingwave -p 4566 -U root -d dev -t -c "SELECT 1;" \
+              >/dev/null 2>&1; do
+              sleep 3
+            done
+          '
+          echo "RisingWave SQL ready."
+
+      - name: Wait for risingwave-init to complete (SQL DDL applied)
+        run: |
+          echo "Waiting for DDL initialisation..."
+          timeout 180 bash -c '
+            until docker inspect -f "{{.State.Status}}" fraud-rw-init 2>/dev/null \
+              | grep -qE "^(exited|dead)$"; do
+              sleep 3
+            done
+          '
+          rc=$(docker inspect -f '{{.State.ExitCode}}' fraud-rw-init)
+          echo "risingwave-init exit code: $rc"
+          [ "$rc" = "0" ] || (docker logs fraud-rw-init && exit 1)
+
+      - name: Wait for producer to start publishing
+        run: |
+          echo "Waiting for producer to publish KYC seed..."
+          timeout 120 bash -c '
+            until docker compose logs producer 2>&1 | grep -q "KYC seed complete"; do
+              sleep 3
+            done
+          '
+          echo "Producer is publishing events."
+
+      - name: Wait for pipeline warm-up
+        run: |
+          echo "Warm-up: ${WARMUP_SECONDS}s for tumbling windows to produce rows…"
+          sleep "$WARMUP_SECONDS"
+
+      - name: Assert Redpanda topics have messages
+        run: |
+          set -e
+          for topic in transactions login_events alert_events kyc_profile_events; do
+            # Read 1 record from the start with a 10s wall-clock cap.
+            got=$(timeout 10 docker compose exec -T redpanda rpk topic consume "$topic" \
+              --brokers redpanda:29092 -n 1 -o start -f '%o\n' 2>/dev/null \
+              | head -n 1 || true)
+            if [ -n "$got" ]; then
+              echo "  ${topic}: has messages (offset=${got}) ✓"
+            else
+              echo "ERROR: topic ${topic} produced no records within 10s"
+              exit 1
+            fi
+          done
+
+      - name: Assert staging views populate (retry)
+        run: |
+          PSQL="docker run --rm --network fraud-detection-streaming_fraud-net \
+            -e PGPASSWORD= postgres:15-alpine \
+            psql -h risingwave -p 4566 -U root -d dev -t -A -c"
+          assert_nonzero() {
+            local view=$1 deadline=$(( $(date +%s) + ASSERT_TIMEOUT ))
+            while [ "$(date +%s)" -lt "$deadline" ]; do
+              rows=$($PSQL "SELECT COUNT(*) FROM ${view};" 2>/dev/null | tr -d ' \n' || true)
+              if [ -n "$rows" ] && [ "$rows" -gt 0 ] 2>/dev/null; then
+                echo "  ${view}: ${rows} rows ✓"
+                return 0
+              fi
+              sleep 5
+            done
+            echo "ERROR: ${view} still empty after ${ASSERT_TIMEOUT}s"
+            return 1
+          }
+          for view in stg_transactions stg_login_events stg_alert_events stg_kyc_profiles; do
+            assert_nonzero "$view" || exit 1
+          done
+
+      - name: Report fraud signal view populations
+        run: |
+          PSQL="docker run --rm --network fraud-detection-streaming_fraud-net \
+            -e PGPASSWORD= postgres:15-alpine \
+            psql -h risingwave -p 4566 -U root -d dev -t -A -c"
+          for view in mv_velocity_alerts mv_cnp_spike mv_login_failure_storm mv_structuring_detection mv_device_anomalies mv_correlated_alert_burst; do
+            rows=$($PSQL "SELECT COUNT(*) FROM ${view};" 2>/dev/null | tr -d ' \n' || echo "ERR")
+            echo "  ${view}: ${rows}"
+          done
+
+      - name: Assert risk score view populates (retry)
+        run: |
+          PSQL="docker run --rm --network fraud-detection-streaming_fraud-net \
+            -e PGPASSWORD= postgres:15-alpine \
+            psql -h risingwave -p 4566 -U root -d dev -t -A -c"
+          deadline=$(( $(date +%s) + ASSERT_TIMEOUT ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            rows=$($PSQL "SELECT COUNT(*) FROM mv_account_risk_score_realtime;" 2>/dev/null | tr -d ' \n' || true)
+            if [ -n "$rows" ] && [ "$rows" -gt 0 ] 2>/dev/null; then
+              echo "mv_account_risk_score_realtime: ${rows} accounts ✓"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "ERROR: mv_account_risk_score_realtime never populated"
+          exit 1
+
+      - name: Assert fraud cases exist (retry)
+        run: |
+          PSQL="docker run --rm --network fraud-detection-streaming_fraud-net \
+            -e PGPASSWORD= postgres:15-alpine \
+            psql -h risingwave -p 4566 -U root -d dev -t -A -c"
+          deadline=$(( $(date +%s) + ASSERT_TIMEOUT ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            cases=$($PSQL "SELECT COUNT(*) FROM mv_open_fraud_cases;" 2>/dev/null | tr -d ' \n' || true)
+            if [ -n "$cases" ] && [ "$cases" -gt 0 ] 2>/dev/null; then
+              echo "mv_open_fraud_cases: ${cases} ✓"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "ERROR: no open cases — fraud injection may not be reaching the detector"
+          exit 1
+
+      - name: Assert Grafana is reachable
+        run: |
+          deadline=$(( $(date +%s) + 60 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            if curl -sf http://localhost:3000/api/health >/dev/null; then
+              echo "Grafana is healthy ✓"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "ERROR: Grafana /api/health unreachable"
+          exit 1
+
+      - name: Assert Grafana datasource queries RisingWave
+        run: |
+          code=$(curl -s -o /tmp/gf.json -w '%{http_code}' -u admin:admin \
+            -X POST 'http://localhost:3000/api/ds/query' \
+            -H 'Content-Type: application/json' \
+            -d '{"queries":[{"refId":"A","datasource":{"type":"grafana-postgresql-datasource","uid":"risingwave"},"rawSql":"SELECT COUNT(*) AS n FROM mv_fraud_kpis_1min","format":"table"}]}')
+          echo "HTTP ${code}"
+          cat /tmp/gf.json
+          echo ""
+          [ "$code" = "200" ] || (echo "Grafana datasource query returned HTTP ${code}" && exit 1)
+          # Per-query status must be 200 (not a datasource-side error)
+          if grep -Eq '"status"[[:space:]]*:[[:space:]]*[45][0-9][0-9]' /tmp/gf.json; then
+            echo "Grafana reported a query error"
+            exit 1
+          fi
+          echo "Grafana → RisingWave OK ✓"
+
+      - name: Print KPI snapshot
+        if: always()
+        run: |
+          PSQL="docker run --rm --network fraud-detection-streaming_fraud-net \
+            -e PGPASSWORD= postgres:15-alpine \
+            psql -h risingwave -p 4566 -U root -d dev -c"
+          echo "=== Fraud KPIs (last 3 minutes) ==="
+          $PSQL "SELECT window_start, total_transactions, flagged_transactions, fraud_rate_pct FROM mv_fraud_kpis_1min ORDER BY window_start DESC LIMIT 3;" || true
+          echo "=== Top Critical Risk Accounts ==="
+          $PSQL "SELECT account_id, risk_score, risk_tier, contributing_signals FROM mv_account_risk_score_realtime WHERE risk_tier IN ('critical','high') ORDER BY risk_score DESC LIMIT 5;" || true
+          echo "=== Open Fraud Cases ==="
+          $PSQL "SELECT customer_id, account_id, ROUND(risk_score::numeric, 3) AS risk_score, risk_tier, recommended_action FROM mv_open_fraud_cases ORDER BY risk_score DESC LIMIT 10;" || true
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== docker compose ps ==="
+          docker compose ps || true
+          echo "=== producer logs (tail 200) ==="
+          docker compose logs --tail=200 producer || true
+          echo "=== risingwave-init logs ==="
+          docker logs fraud-rw-init || true
+          echo "=== risingwave logs (tail 100) ==="
+          docker compose logs --tail=100 risingwave || true
+          echo "=== redpanda logs (tail 50) ==="
+          docker compose logs --tail=50 redpanda || true
+          echo "=== grafana logs (tail 50) ==="
+          docker compose logs --tail=50 grafana || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

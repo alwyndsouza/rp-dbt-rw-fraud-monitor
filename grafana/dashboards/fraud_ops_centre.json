@@ -1,0 +1,492 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Real-time fraud detection monitoring — Redpanda → RisingWave",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "orange", "value": 10 },
+              { "color": "red", "value": 20 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Fraud Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT fraud_rate_pct FROM mv_fraud_kpis_1min ORDER BY window_start DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Critical Risk Accounts",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS critical_accounts FROM mv_account_risk_score_realtime WHERE risk_tier = 'critical'",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Open Fraud Cases",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS open_cases FROM mv_open_fraud_cases",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Transactions / min",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT total_transactions FROM mv_fraud_kpis_1min ORDER BY window_start DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "transactions",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 5,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "title": "Transaction Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT window_start AS \"time\", total_transactions AS \"Total\", flagged_transactions AS \"Flagged\" FROM mv_fraud_kpis_1min WHERE $__timeFilter(window_start) ORDER BY window_start ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "events",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 4,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 6,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "title": "Fraud Signal Activity",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT window_start AS \"time\", velocity_breaches AS \"Velocity\", geo_anomalies AS \"Geo Impossible\", brute_force_attempts AS \"Brute Force\", structuring_flags AS \"Structuring\" FROM mv_fraud_kpis_1min WHERE $__timeFilter(window_start) ORDER BY window_start ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "%",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "dashed", "steps": [{ "color": "orange", "value": 10 }] }
+          },
+          "decimals": 1,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "id": 7,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "title": "Fraud Rate % Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT window_start AS \"time\", fraud_rate_pct AS \"Fraud Rate %\" FROM mv_fraud_kpis_1min WHERE $__timeFilter(window_start) ORDER BY window_start ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false }
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "critical" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "high" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "medium" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "low" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "id": 8,
+      "options": {
+        "displayLabels": ["name", "value"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "donut",
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "title": "Account Risk Tier Distribution",
+      "type": "piechart",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT risk_tier, COUNT(*) AS accounts FROM mv_account_risk_score_realtime GROUP BY risk_tier ORDER BY accounts DESC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": true } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "risk_score" },
+            "properties": [
+              { "id": "custom.width", "value": 90 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "mode": "gradient", "type": "gauge", "valueDisplayMode": "text" }
+              },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.3 },
+                { "color": "orange", "value": 0.5 },
+                { "color": "red", "value": 0.8 }
+              ]}}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "risk_tier" },
+            "properties": [
+              { "id": "custom.width", "value": 90 },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "applyToRow": false
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "critical": { "color": "red", "index": 0 } } },
+                  { "type": "value", "options": { "high": { "color": "orange", "index": 1 } } },
+                  { "type": "value", "options": { "medium": { "color": "yellow", "index": 2 } } },
+                  { "type": "value", "options": { "low": { "color": "green", "index": 3 } } }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "recommended_action" },
+            "properties": [{ "id": "custom.width", "value": 130 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 20 },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "enablePagination": true, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "risk_score" }]
+      },
+      "title": "Open Fraud Investigation Cases",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT account_id, customer_id, ROUND(risk_score::NUMERIC, 3) AS risk_score, risk_tier, kyc_risk_tier, recommended_action, contributing_signals::TEXT AS contributing_signals FROM mv_open_fraud_cases ORDER BY risk_score DESC LIMIT 100",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": true } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "risk_score" },
+            "properties": [
+              { "id": "custom.width", "value": 90 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "mode": "gradient", "type": "gauge", "valueDisplayMode": "text" }
+              },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.3 },
+                { "color": "orange", "value": 0.5 },
+                { "color": "red", "value": 0.8 }
+              ]}}
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 29 },
+      "id": 10,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "enablePagination": true, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "risk_score" }]
+      },
+      "title": "Top High-Risk Accounts",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "risingwave" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT account_id, customer_id, ROUND(risk_score::NUMERIC, 3) AS risk_score, risk_tier, contributing_signals::TEXT AS contributing_signals FROM mv_account_risk_score_realtime WHERE risk_tier IN ('high', 'critical') ORDER BY risk_score DESC LIMIT 50",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["fraud", "realtime", "banking"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Fraud Operations Centre",
+  "uid": "fraud-ops-centre",
+  "version": 1
+}

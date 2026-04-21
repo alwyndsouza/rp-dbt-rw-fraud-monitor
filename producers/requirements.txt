@@ -1,0 +1,4 @@
+faker==24.11.0
+kafka-python==2.0.2
+pydantic==2.7.1
+geopy==2.4.1

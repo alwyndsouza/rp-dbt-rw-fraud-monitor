@@ -1,0 +1,8 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+
+# RisingWave DDL isn't fully supported by sqlfluff parsing.
+# Keep style linting, but don't fail CI on parser gaps.
+ignore = parsing
+exclude_rules = LT05,LT01,LT12,ST05,RF05,AL05
