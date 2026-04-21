@@ -1,9 +1,5 @@
 # Real-Time Fraud Detection Streaming Reference
 
-<p align="center">
-  <img src="docs/banner.svg" alt="Real-Time Fraud Detection — Redpanda · RisingWave · Grafana" width="900"/>
-</p>
-
 Production-oriented, local-first reference architecture for **real-time fraud detection** using:
 - **Redpanda** for event transport (Kafka API)
 - **RisingWave** for continuous SQL and materialized views
