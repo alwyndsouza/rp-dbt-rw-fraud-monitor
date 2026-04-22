@@ -32,6 +32,18 @@ The pipeline includes signal logic for:
 
 ## 2) High-Level Architecture
 
+### Redpanda Topic Structure & Data Flow
+
+![Redpanda Topic Structure & Data Flow](docs/images/redpanda_topic_structure.png)
+
+Domain-separated input topics feed the pipeline. Malformed events are routed to a Dead Letter Queue (`dlq.malformed_events`) rather than dropped.
+
+### RisingWave Materialized View Pipeline
+
+![RisingWave Materialized View Pipeline](docs/images/risingwave_mv_pipeline.png)
+
+Four SQL layers transform raw Redpanda events into investigation-ready insights: Sources → Staging MVs (enrichment & KYC joins) → Signal MVs (business logic & windowed aggregations) → Risk/Case MVs (per-account risk scores and open case alerts).
+
 ```mermaid
 flowchart LR
     subgraph Producer["Python Producer"]
