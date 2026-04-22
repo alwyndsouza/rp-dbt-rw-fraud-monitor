@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /home/user/fraud-detection-streaming && bash .claude/hooks/post-edit.sh \"$CLAUDE_TOOL_INPUT_FILE_PATH\""
+            "command": "cd /home/user/rp-rw-fraud-monitor && bash .claude/hooks/post-edit.sh \"$CLAUDE_TOOL_INPUT_FILE_PATH\""
           }
         ]
       }
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /home/user/fraud-detection-streaming/.claude/hooks/pre-bash.sh \"$CLAUDE_TOOL_INPUT_COMMAND\""
+            "command": "bash /home/user/rp-rw-fraud-monitor/.claude/hooks/pre-bash.sh \"$CLAUDE_TOOL_INPUT_COMMAND\""
           }
         ]
       }

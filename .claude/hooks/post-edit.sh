@@ -6,7 +6,7 @@
 FILE="${1:-}"
 [ -z "$FILE" ] && exit 0
 
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo "/home/user/fraud-detection-streaming")"
+REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo "/home/user/rp-rw-fraud-monitor")"
 
 # ── Python: ruff check + format ────────────────────────────────────────────
 if [[ "$FILE" == *.py ]]; then
