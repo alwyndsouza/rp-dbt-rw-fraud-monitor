@@ -2,14 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
 # Copy dependency files first for layer caching
-COPY pyproject.toml uv.lock* requirements.txt ./
+COPY pyproject.toml requirements.txt ./
 
-# Install dependencies (no project install — we run from source)
-RUN uv sync --frozen --no-install-project 2>/dev/null || uv pip install --system -r requirements.txt
+# Install dependencies
+RUN pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org \
+    -r requirements.txt
 
 COPY . .
 
