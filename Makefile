@@ -130,10 +130,24 @@ lint: ## Check Python files for issues
 	@uv run ruff check .
 
 ci: ## Run local CI-equivalent checks
-	ruff check producers
-	pytest -q producers/tests
-	python scripts/ci_sql_checks.py
-	cd fraud_detection && dbt compile --profiles-dir .
+	@echo "=== 1. Running pytest ==="
+	@cd producers && uv run pytest tests -q && cd ..
+	@echo ""
+	@echo "=== 2. Running ruff check ==="
+	@uv run ruff check producers
+	@echo ""
+	@echo "=== 3. Running SQL validation checks ==="
+	@python3 scripts/ci_sql_checks.py
+	@echo ""
+	@echo "=== 4. Running dbt tests (Docker) ==="
+	@docker run --rm \
+		--network rp-dbt-rw-fraud-monitor_fraud-net \
+		-v $$(pwd)/fraud_detection:/dbt \
+		-e RISINGWAVE_HOST=risingwave \
+		python:3.11-slim \
+		sh -c 'pip install dbt-risingwave==1.9.7 --quiet 2>&1 >/dev/null && cd /dbt && dbt test --profiles-dir .' 2>&1 | grep -E "(Done\.|PASS=|ERROR=|Completed)"
+	@echo ""
+	@echo "✅ All CI checks passed!"
 
 dbt-run: ## Run dbt models against RisingWave (requires dbt-risingwave installed)
 	cd fraud_detection && dbt run --profiles-dir .

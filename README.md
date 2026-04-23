@@ -151,12 +151,34 @@ make psql           # SQL shell to RisingWave
 
 ### Python tests / lint
 
+**Easiest - run all CI checks at once:**
 ```bash
-pytest producers/tests -q
-ruff check producers
-python scripts/ci_sql_checks.py
-make dbt-test  # run dbt tests
+make ci
 ```
+
+**Individual commands:**
+```bash
+# Run pytest (from producers directory with uv)
+cd producers && uv run pytest tests -q && cd ..
+
+# Run ruff linting
+uv run ruff check producers
+
+# Run SQL validation checks
+python3 scripts/ci_sql_checks.py
+
+# Run dbt tests (requires Docker + RisingWave running)
+docker run --rm \
+  --network rp-dbt-rw-fraud-monitor_fraud-net \
+  -v $(pwd)/fraud_detection:/dbt \
+  -e RISINGWAVE_HOST=risingwave \
+  python:3.11-slim \
+  sh -c 'pip install dbt-risingwave==1.9.7 --quiet 2>&1 >/dev/null && cd /dbt && dbt test --profiles-dir .'
+```
+
+**Prerequisites:**
+- Install dependencies: `uv sync --group dev` (root) and `cd producers && uv sync --extra dev`
+- Ensure Docker network `rp-dbt-rw-fraud-monitor_fraud-net` exists (run `make up` first)
 
 ---
 
