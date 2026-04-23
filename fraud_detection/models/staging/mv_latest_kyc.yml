@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: mv_latest_kyc
+    description: Latest KYC profile per customer
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique

@@ -74,12 +74,17 @@ services:
       retries: 15
       start_period: 30s
 
-  risingwave-init:
-    image: postgres:15.8-alpine
-    container_name: fraud-rw-init
+  dbt-run:
+    image: python:3.11-slim
+    container_name: fraud-dbt-run
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        pip install dbt-risingwave==1.9.7 --quiet &&
+        cd /dbt &&
+        dbt run --profiles-dir /dbt
     volumes:
-      - ./sql:/sql:ro
-      - ./scripts/init_sql.sh:/init_sql.sh:ro
+      - ./fraud_detection:/dbt
     networks:
       - fraud-net
     depends_on:
@@ -88,8 +93,12 @@ services:
       risingwave:
         condition: service_healthy
     environment:
-      PGPASSWORD: ""
-    entrypoint: ["/bin/sh", "/init_sql.sh"]
+      RISINGWAVE_HOST: risingwave
+      RISINGWAVE_PORT: "4566"
+      RISINGWAVE_USER: root
+      RISINGWAVE_PASSWORD: ""
+      RISINGWAVE_DB: dev
+      REDPANDA_BROKERS: ${REDPANDA_BROKERS:-redpanda:29092}
     restart: on-failure
 
   seed-topics:
@@ -143,7 +152,7 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
-      risingwave-init:
+      dbt-run:
         condition: service_completed_successfully
       seed-topics:
         condition: service_completed_successfully

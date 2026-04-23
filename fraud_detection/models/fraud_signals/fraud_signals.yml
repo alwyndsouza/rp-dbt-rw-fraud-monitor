@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: mv_velocity_alerts
+    description: Velocity fraud detection (5+ txns in 60s)
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_geo_impossible_trips
+    description: Geographic impossibility detection
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_known_customer_devices
+    description: Device tracking per customer
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_device_anomalies
+    description: Account takeover via unknown devices
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_cnp_spike
+    description: Card-not-present fraud spikes
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_login_failure_storm
+    description: Brute-force login detection
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_structuring_detection
+    description: AML structuring/smurfing detection
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_correlated_alert_burst
+    description: Compound fraud detection
+    config:
+      tags: ['fraud_signal']
+  
+  - name: mv_network_analysis
+    description: Synthetic identity ring detection
+    config:
+      tags: ['fraud_signal']

@@ -92,13 +92,16 @@ For deeper system design, see:
 .
 ├── docker-compose.yml             # Service orchestration
 ├── Makefile                       # Developer workflow targets
-├── sql/                           # RisingWave source + MV pipeline
+├── fraud_detection/               # dbt project for RisingWave models
+│   ├── models/                    # dbt models (sources, staging, signals, risk, cases)
+│   ├── dbt_project.yml            # dbt project configuration
+│   └── profiles.yml               # RisingWave connection profile
 ├── producers/                     # Python event producer
 │   ├── generators/                # Synthetic event generation modules
 │   ├── tests/                     # Unit tests for generators + producer logic
 │   └── main.py                    # Multi-threaded producer runtime
 ├── grafana/                       # Provisioned datasource + dashboards
-├── scripts/                       # SQL/bootstrap and health check scripts
+├── scripts/                       # Health check and utility scripts
 └── docs/                          # Architecture + ops documentation
 ```
 
@@ -152,6 +155,7 @@ make psql           # SQL shell to RisingWave
 pytest producers/tests -q
 ruff check producers
 python scripts/ci_sql_checks.py
+make dbt-test  # run dbt tests
 ```
 
 ---
@@ -232,7 +236,7 @@ See `CONTRIBUTING.md` for:
 
 GitHub Actions CI runs:
 - `ruff` and `pytest` on Python 3.11
-- SQL lint (`sqlfluff`) + static SQL contract checks
+- dbt model compilation and validation
 - smoke checks for compose config and data-quality artifacts
 
 Workflow file: `.github/workflows/ci.yml`.

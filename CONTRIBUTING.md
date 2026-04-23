@@ -10,14 +10,16 @@ Thanks for contributing to `fraud-detection-streaming`.
 - Prefer small, testable functions and deterministic behavior where practical.
 - Keep generator payloads schema-compatible with SQL sources.
 
-### SQL (RisingWave)
+### dbt Models (RisingWave)
 - Keep pipeline layered:
-  1. `01_sources.sql`
-  2. `02_staging.sql`
-  3. `03_fraud_signals.sql`
-  4. `04_risk_aggregations.sql`
-  5. `05_case_management.sql`
-- Avoid breaking downstream MV contracts without coordinated updates.
+  1. `models/sources/` - Kafka sources
+  2. `models/staging/` - Type casting and enrichment
+  3. `models/fraud_signals/` - Detection logic
+  4. `models/risk_aggregations/` - Risk scores and KPIs
+  5. `models/case_management/` - Analyst workflows
+- Use `{{ ref('model_name') }}` for dependencies between models.
+- Use `{{ config(materialized='materialized_view') }}` for most models.
+- Avoid breaking downstream model contracts without coordinated updates.
 - Document non-obvious thresholds and window choices inline.
 
 ### Infrastructure / Compose
@@ -32,7 +34,7 @@ Thanks for contributing to `fraud-detection-streaming`.
 ```bash
 make up
 make validate
-make dq
+make dbt-test
 pytest producers/tests -q
 ruff check producers
 ```
@@ -76,7 +78,8 @@ Reviewers should verify:
 
 ### Correctness
 - [ ] Behavior matches requirement and is backward-compatible or clearly documented.
-- [ ] SQL views and joins preserve intended semantics.
+- [ ] dbt models and joins preserve intended semantics.
+- [ ] Model dependencies are correctly specified using `{{ ref() }}`.
 - [ ] Event schema fields and types remain consistent end-to-end.
 
 ### Reliability
@@ -96,5 +99,6 @@ Reviewers should verify:
 
 ### Testing & Documentation
 - [ ] Tests cover new logic and edge cases.
-- [ ] Data quality guardrails remain valid (`sql/99_data_quality_checks.sql`, schema contracts).
+- [ ] dbt tests defined for data quality guardrails.
+- [ ] dbt model documentation added where appropriate.
 - [ ] README/docs updated when behavior or operations change.

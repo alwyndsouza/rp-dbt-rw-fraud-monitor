@@ -34,12 +34,15 @@ fraud-detection-streaming/
 │   │   └── kyc_profile.py     ← KYC profile events
 │   └── tests/                 ← 75 pytest tests, all must pass
 │
-├── sql/
-│   ├── 01_sources.sql         ← Kafka source definitions (FORMAT PLAIN ENCODE JSON)
-│   ├── 02_staging.sql         ← type casting + derived columns
-│   ├── 03_fraud_signals.sql   ← 8 fraud detection MVs (TUMBLE/HOP/LAG)
-│   ├── 04_risk_aggregations.sql ← risk score, KPIs, merchant/channel breakdown
-│   └── 05_case_management.sql ← investigation queue + recommended actions
+├── fraud_detection/           ← dbt project for RisingWave
+│   ├── dbt_project.yml        ← dbt project config
+│   ├── profiles.yml           ← RisingWave connection profile
+│   └── models/
+│       ├── sources/           ← Kafka source definitions (FORMAT PLAIN ENCODE JSON)
+│       ├── staging/           ← type casting + derived columns
+│       ├── fraud_signals/     ← 8 fraud detection MVs (TUMBLE/HOP/LAG)
+│       ├── risk_aggregations/ ← risk score, KPIs, merchant/channel breakdown
+│       └── case_management/   ← investigation queue + recommended actions
 │
 ├── grafana/
 │   ├── provisioning/
@@ -110,35 +113,38 @@ _SEVERITY_MAP["my_alert_type"] = ("high", 0.70, 0.90)
 _RULE_IDS["my_alert_type"] = "RULE_007"
 ```
 
-**Step 3** — Add a fraud signal MV in `sql/03_fraud_signals.sql`:
+**Step 3** — Add a fraud signal dbt model in `fraud_detection/models/fraud_signals/mv_my_new_pattern.sql`:
 ```sql
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_my_new_pattern AS
+{{ config(materialized='materialized_view') }}
+
 SELECT
     account_id, customer_id,
     COUNT(*) AS event_count,
     window_start, window_end,
     COUNT(*) >= 3 AS is_my_pattern
-FROM TUMBLE(stg_transactions, occurred_at, INTERVAL '5' MINUTE)
+FROM TUMBLE({{ ref('stg_transactions') }}, occurred_at, INTERVAL '5' MINUTE)
 WHERE <filter condition>
 GROUP BY account_id, customer_id, window_start, window_end
-HAVING COUNT(*) >= 2;
+HAVING COUNT(*) >= 2
 ```
 
-**Step 4** — Wire into risk score in `sql/04_risk_aggregations.sql` (add CTE + weight to `mv_account_risk_score_realtime`).
+**Step 4** — Wire into risk score in `fraud_detection/models/risk_aggregations/mv_account_risk_score_realtime.sql` (add CTE + weight using `{{ ref('mv_my_new_pattern') }}`).
 
 **Step 5** — Add tests in `producers/tests/` and document in `docs/fraud_patterns.md`.
 
 ### Modifying Event Schemas
 
-All event schemas are Pydantic v2 models in `producers/models.py`. The fields `is_fraud` and `fraud_scenario` on `TransactionEvent` are marked `exclude=True` — they are **stripped from all Kafka payloads** but readable on the Python instance. Do not add any other producer-internal fields to Kafka schemas without mirroring them in `sql/01_sources.sql`.
+All event schemas are Pydantic v2 models in `producers/models.py`. The fields `is_fraud` and `fraud_scenario` on `TransactionEvent` are marked `exclude=True` — they are **stripped from all Kafka payloads** but readable on the Python instance. Do not add any other producer-internal fields to Kafka schemas without mirroring them in the dbt source models (`fraud_detection/models/sources/`).
 
-### SQL Changes
+### dbt Model Changes
 
-- All SQL targets **RisingWave** (PostgreSQL-compatible). Use `CREATE ... IF NOT EXISTS` always.
+- All models target **RisingWave** (PostgreSQL-compatible) via dbt-risingwave adapter.
+- Use `{{ config(materialized='materialized_view') }}` or `{{ config(materialized='source') }}` in model files.
+- Reference upstream models using `{{ ref('model_name') }}` for proper dependency management.
 - Time-windowed aggregations use `TUMBLE(source, time_col, INTERVAL 'N' UNIT)` — not standard SQL `WINDOW` clauses.
 - Consecutive-event comparisons use `LAG()` over a partitioned stream (see `mv_geo_impossible_trips`).
 - All timestamp fields arrive as `VARCHAR` in sources and are cast to `TIMESTAMPTZ` in staging.
-- After any SQL change, run `make psql` and test the view manually before committing.
+- After any model change, run `make dbt-run` to deploy and `make psql` to test manually.
 
 ### Environment Variables
 
@@ -184,7 +190,7 @@ ruff check --fix producers/ # auto-fix fixable issues
 
 Rules enabled: `E, W, F, I` (isort), `B` (bugbear), `C4`, `UP` (pyupgrade), `TID`, `SIM`, `RUF`. Line length: 100. Target: Python 3.11.
 
-Pre-commit hooks run ruff, sqlfluff, shellcheck, and standard file hygiene checks automatically on `git commit`.
+Pre-commit hooks run ruff, shellcheck, and standard file hygiene checks automatically on `git commit`.
 
 ```bash
 pip install pre-commit && pre-commit install  # one-time setup
@@ -202,7 +208,7 @@ pre-commit run --all-files                    # run manually
 | `lint` | every push | ruff check + format |
 | `test` | every push | pytest on Python 3.11 + 3.12 |
 | `docker-build` | every push | producer image builds successfully |
-| `sql-validate` | every push | sqlfluff on all `sql/*.sql` files |
+| `dbt-compile` | every push | dbt compilation check for all models |
 | `compose-validate` | every push | `docker compose config` is valid |
 | `e2e` | PR to main only | full stack: topics populated, views non-empty, fraud cases exist |
 

@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: stg_card_events
+    description: Parsed card lifecycle events
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: occurred_at
+        tests:
+          - not_null

@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: Parsed transactions with timestamp cast and derived indicators
+    columns:
+      - name: transaction_id
+        tests:
+          - not_null
+          - unique
+      - name: account_id
+        tests:
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: occurred_at
+        tests:
+          - not_null
+      - name: amount
+        tests:
+          - not_null

@@ -16,9 +16,10 @@
 - Maintains all materialized views for fraud signals, risk, and cases.
 - Exposes SQL endpoint (`:4566`) and dashboard (`:5691`).
 
-### 4) `risingwave-init`
-- One-shot SQL bootstrap runner.
-- Applies `sql/01` through `sql/05` in sequence.
+### 4) `dbt-run`
+- One-shot dbt runner that deploys all models to RisingWave.
+- Runs `dbt run` to create sources and materialized views.
+- Manages dependencies automatically via dbt's DAG.
 
 ### 5) `producer`
 - Python multi-threaded event producer.
@@ -50,13 +51,15 @@
 
 ---
 
-## SQL Modules
+## dbt Models
 
-| File | Responsibility |
+| Directory | Responsibility |
 |---|---|
-| `sql/01_sources.sql` | Kafka source definitions |
-| `sql/02_staging.sql` | Type casting and enrichment |
-| `sql/03_fraud_signals.sql` | Pattern-level fraud detection materialized views |
-| `sql/04_risk_aggregations.sql` | Account-level risk scores, KPI aggregates, exposure views |
-| `sql/05_case_management.sql` | Fraud case queues and analyst-facing summaries |
+| `fraud_detection/models/sources/` | Kafka source definitions |
+| `fraud_detection/models/staging/` | Type casting and enrichment |
+| `fraud_detection/models/fraud_signals/` | Pattern-level fraud detection materialized views |
+| `fraud_detection/models/risk_aggregations/` | Account-level risk scores, KPI aggregates, exposure views |
+| `fraud_detection/models/case_management/` | Fraud case queues and analyst-facing summaries |
+
+All models managed via dbt with proper dependency tracking using `{{ ref() }}` and `{{ source() }}`.
 

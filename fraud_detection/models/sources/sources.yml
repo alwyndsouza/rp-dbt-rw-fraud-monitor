@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: transactions
+    description: Kafka source for transaction events
+    config:
+      materialized: source
+      tags: ['source']
+  
+  - name: login_events
+    description: Kafka source for login events
+    config:
+      materialized: source
+      tags: ['source']
+  
+  - name: card_events
+    description: Kafka source for card events
+    config:
+      materialized: source
+      tags: ['source']
+  
+  - name: alert_events
+    description: Kafka source for alert events
+    config:
+      materialized: source
+      tags: ['source']
+  
+  - name: kyc_profile_events
+    description: Kafka source for KYC profile events
+    config:
+      materialized: source
+      tags: ['source']
