@@ -26,12 +26,13 @@ Producer Events
 
 ## SQL Model Layers
 
-### Layer 1 — Sources (`sql/01_sources.sql`)
+### Layer 1 — Sources (`fraud_detection/models/sources/`)
 - Ingests raw JSON from Kafka-compatible topics.
 - Minimal transformation at this stage.
 - `scan.startup.mode = 'earliest'` enables replay from beginning.
+- Each topic has its own dbt source model file.
 
-### Layer 2 — Staging (`sql/02_staging.sql`)
+### Layer 2 — Staging (`fraud_detection/models/staging/`)
 - Casts raw timestamps into `TIMESTAMPTZ`.
 - Adds helper flags:
   - `is_odd_hours`
@@ -39,7 +40,7 @@ Producer Events
   - `is_high_risk_mcc`
 - Maintains latest customer KYC view (`mv_latest_kyc`).
 
-### Layer 3 — Fraud Signals (`sql/03_fraud_signals.sql`)
+### Layer 3 — Fraud Signals (`fraud_detection/models/fraud_signals/`)
 Independent MVs implement fraud typologies:
 - `mv_velocity_alerts`
 - `mv_geo_impossible_trips`
@@ -50,11 +51,13 @@ Independent MVs implement fraud typologies:
 - `mv_correlated_alert_burst`
 - `mv_network_analysis` (stretch signal)
 
-### Layer 4 — Risk Aggregation (`sql/04_risk_aggregations.sql`)
+Each signal is a separate dbt model file with proper `{{ ref() }}` dependencies.
+
+### Layer 4 — Risk Aggregation (`fraud_detection/models/risk_aggregations/`)
 - Combines signal flags into account-level risk score (`mv_account_risk_score_realtime`).
 - Produces operational KPI and exposure views for dashboards.
 
-### Layer 5 — Case Management (`sql/05_case_management.sql`)
+### Layer 5 — Case Management (`fraud_detection/models/case_management/`)
 - Produces analyst action queues and alert summaries:
   - `mv_open_fraud_cases`
   - `mv_resolved_cases_today`

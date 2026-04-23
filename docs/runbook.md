@@ -76,7 +76,7 @@ After restart, `make risk` should show 0 critical accounts within 2 minutes.
 
 **Causes and fixes**:
 1. **Topics are empty** — check `make logs-producer`. If producer errors, check broker connectivity: `docker compose exec producer env | grep REDPANDA`
-2. **SQL init didn't run** — check `docker compose logs risingwave-init`. Re-run manually: `make psql` then paste contents of SQL files.
+2. **dbt models didn't deploy** — check `docker compose logs dbt-run`. Re-run manually: `make dbt-run`
 3. **Not enough events yet** — velocity and structuring windows need multiple events. Wait 60–120 seconds.
 
 ### Producer exits immediately
@@ -120,6 +120,6 @@ fraud_producer_fraud_rate
 ## Adding a New Topic
 
 1. Add topic creation to the `seed-topics` service in `docker-compose.yml`
-2. Add a new `CREATE SOURCE` in `sql/01_sources.sql`
-3. Add a staging MV in `sql/02_staging.sql`
-4. Rebuild: `make reset`
+2. Add a new source in `fraud_detection/models/sources/` using `{{ config(materialized='source') }}`
+3. Add a staging model in `fraud_detection/models/staging/`
+4. Run `make dbt-run` to deploy the new models

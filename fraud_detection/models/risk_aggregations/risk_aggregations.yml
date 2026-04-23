@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: mv_account_risk_score_realtime
+    description: Per-account risk score (0.0-1.0) from fraud signals
+    config:
+      tags: ['risk_score', 'critical']
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+      - name: risk_score
+        tests:
+          - not_null
+      - name: risk_tier
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['low', 'medium', 'high', 'critical']
+  
+  - name: mv_fraud_kpis_1min
+    description: 1-minute fraud operations KPIs
+    config:
+      tags: ['kpi']
+    columns:
+      - name: window_start
+        tests:
+          - not_null
+  
+  - name: mv_channel_risk_breakdown
+    description: Per-channel fraud statistics
+    config:
+      tags: ['risk_aggregation']
+  
+  - name: mv_hourly_fraud_trend
+    description: 24-hour fraud trend
+    config:
+      tags: ['risk_aggregation']
+  
+  - name: mv_merchant_fraud_exposure
+    description: Per-merchant fraud exposure
+    config:
+      tags: ['risk_aggregation']

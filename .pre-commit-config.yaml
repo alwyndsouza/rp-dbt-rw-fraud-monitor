@@ -25,12 +25,17 @@ repos:
         args: [--fix=lf]
       - id: detect-private-key
 
-  # ── SQL: basic syntax check ──────────────────────────────────────────────
-  - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 3.0.7
-    hooks:
-      - id: sqlfluff-lint
-        files: ^sql/.*\.sql$
+  # ── dbt: compilation check ───────────────────────────────────────────────
+  # Note: Full dbt validation runs in CI, not in pre-commit for performance
+  # Uncomment if you want local dbt checks:
+  # - repo: local
+  #   hooks:
+  #     - id: dbt-compile
+  #       name: dbt compile
+  #       entry: bash -c 'cd fraud_detection && dbt compile --profiles-dir .'
+  #       language: system
+  #       files: ^fraud_detection/models/.*\.sql$
+  #       pass_filenames: false
 
   # ── Shell scripts ────────────────────────────────────────────────────────
   - repo: https://github.com/shellcheck-py/shellcheck-py

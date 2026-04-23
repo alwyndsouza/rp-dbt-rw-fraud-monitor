@@ -1,6 +1,12 @@
 [sqlfluff]
 dialect = postgres
-templater = raw
+templater = dbt
+
+[sqlfluff:templater:dbt]
+project_dir = fraud_detection/
+profiles_dir = fraud_detection/
+profile = fraud_detection
+target = dev
 
 # RisingWave DDL isn't fully supported by sqlfluff parsing.
 # Keep style linting, but don't fail CI on parser gaps.

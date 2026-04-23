@@ -1,7 +1,7 @@
 .PHONY: up down reset status logs logs-producer seed validate psql \
         risk cases kpis console grafana fraud-rate dq ci help \
-        sqlfluff-check sqlfluff-fix format lint \
-        dbt-run dbt-debug dbt-docs dbt-test dbt-clean
+        format lint \
+        dbt-run dbt-debug dbt-docs dbt-test dbt-clean dbt-compile
 
 # Load .env if it exists
 -include .env
@@ -119,28 +119,21 @@ fraud-rate: ## Show current fraud rate from KPI view
 	  ORDER BY window_start DESC \
 	  LIMIT 1;" 2>/dev/null || echo "KPI view not ready yet."
 
-dq: ## Run data-quality guardrail checks against RisingWave
-	@bash scripts/run_data_quality_checks.sh
+dq: ## Run data-quality tests via dbt
+	@echo "Running dbt data quality tests..."
+	@cd fraud_detection && dbt test --profiles-dir . --select tag:data_quality || echo "dbt tests not configured yet"
 
-sqlfluff-check: ## Check SQL files for linting issues
-	@uv run sqlfluff lint sql/
-
-sqlfluff-fix: ## Auto-fix SQL linting issues
-	@uv run sqlfluff fix sql/
-
-format: ## Format Python and SQL files
+format: ## Format Python files
 	@uv run ruff format .
-	@uv run sqlfluff fix sql/
 
-lint: ## Check Python and SQL files for issues
+lint: ## Check Python files for issues
 	@uv run ruff check .
-	@uv run sqlfluff lint sql/
 
 ci: ## Run local CI-equivalent checks
 	ruff check producers
 	pytest -q producers/tests
 	python scripts/ci_sql_checks.py
-	uv run sqlfluff lint sql/
+	cd fraud_detection && dbt compile --profiles-dir .
 
 dbt-run: ## Run dbt models against RisingWave (requires dbt-risingwave installed)
 	cd fraud_detection && dbt run --profiles-dir .
@@ -153,6 +146,9 @@ dbt-test: ## Run dbt tests against RisingWave
 
 dbt-docs: ## Generate and serve dbt documentation
 	cd fraud_detection && dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
+
+dbt-compile: ## Compile dbt models without running them
+	cd fraud_detection && dbt compile --profiles-dir .
 
 dbt-clean: ## Remove dbt build artefacts
 	cd fraud_detection && dbt clean

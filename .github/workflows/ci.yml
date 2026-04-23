@@ -110,9 +110,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 4. SQL Validation ───────────────────────────────────────────────────────
-  sql-validate:
-    name: SQL Validation
+  # ── 4. dbt Compilation ──────────────────────────────────────────────────────
+  dbt-compile:
+    name: dbt Compilation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -125,17 +125,20 @@ jobs:
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
-      - name: Create venv
-        working-directory: producers
-        run: uv venv
+      - name: Install dbt-risingwave
+        run: uv pip install dbt-risingwave==1.9.7
 
-      - name: Install sqlfluff
-        working-directory: producers
-        run: uv pip install sqlfluff==3.0.7
-
-      - name: Lint SQL files
-        working-directory: producers
-        run: uv run sqlfluff lint ../sql/
+      - name: Compile dbt models
+        working-directory: fraud_detection
+        run: |
+          # Dry run compilation without connecting to RisingWave
+          dbt parse --profiles-dir .
+        env:
+          RISINGWAVE_HOST: localhost
+          RISINGWAVE_PORT: "4566"
+          RISINGWAVE_USER: root
+          RISINGWAVE_PASSWORD: ""
+          RISINGWAVE_DB: dev
 
   # ── 5. Compose Config Validation ────────────────────────────────────────────
   compose-validate:

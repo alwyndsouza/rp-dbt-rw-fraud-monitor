@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_alert_events
+    description: Parsed alert events with severity weight
+    columns:
+      - name: alert_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+      - name: occurred_at
+        tests:
+          - not_null

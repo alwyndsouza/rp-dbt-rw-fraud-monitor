@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg_kyc_profiles
+    description: Parsed KYC profile events
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+      - name: updated_at
+        tests:
+          - not_null

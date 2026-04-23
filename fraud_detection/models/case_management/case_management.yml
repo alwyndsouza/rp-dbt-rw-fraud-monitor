@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: mv_open_fraud_cases
+    description: Active high/critical risk cases
+    config:
+      tags: ['case_management']
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+      - name: risk_tier
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['high', 'critical']
+      - name: recommended_action
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['monitor', 'block_card', 'freeze_account', 'escalate']
+  
+  - name: mv_resolved_cases_today
+    description: Resolved cases (risk < 0.3)
+    config:
+      tags: ['case_management']
+  
+  - name: mv_recent_high_alerts
+    description: High/critical alerts from last 30min
+    config:
+      tags: ['case_management']
+    columns:
+      - name: alert_id
+        tests:
+          - not_null
+          - unique
+      - name: severity
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['high', 'critical']
