@@ -9,6 +9,7 @@ dev = [
     "pytest>=8.0.0",
     "sqlfluff>=3.0.0",
     "sqlfluff-templater-dbt>=3.0.0",
+    "dbt-risingwave>=1.9.7",
 ]
 
 [tool.ruff]

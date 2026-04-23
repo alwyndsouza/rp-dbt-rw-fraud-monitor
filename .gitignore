@@ -11,3 +11,9 @@ build/
 .venv/
 *.duckdb
 *.duckdb.wal
+
+# dbt artefacts
+fraud_detection/target/
+fraud_detection/dbt_packages/
+fraud_detection/.user.yml
+fraud_detection/logs/

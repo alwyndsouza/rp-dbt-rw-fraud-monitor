@@ -1,6 +1,7 @@
 .PHONY: up down reset status logs logs-producer seed validate psql \
         risk cases kpis console grafana fraud-rate dq ci help \
-        sqlfluff-check sqlfluff-fix format lint
+        sqlfluff-check sqlfluff-fix format lint \
+        dbt-run dbt-debug dbt-docs dbt-test dbt-clean
 
 # Load .env if it exists
 -include .env
@@ -140,3 +141,18 @@ ci: ## Run local CI-equivalent checks
 	pytest -q producers/tests
 	python scripts/ci_sql_checks.py
 	uv run sqlfluff lint sql/
+
+dbt-run: ## Run dbt models against RisingWave (requires dbt-risingwave installed)
+	cd fraud_detection && dbt run --profiles-dir .
+
+dbt-debug: ## Validate dbt connection to RisingWave
+	cd fraud_detection && dbt debug --profiles-dir .
+
+dbt-test: ## Run dbt tests against RisingWave
+	cd fraud_detection && dbt test --profiles-dir .
+
+dbt-docs: ## Generate and serve dbt documentation
+	cd fraud_detection && dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
+
+dbt-clean: ## Remove dbt build artefacts
+	cd fraud_detection && dbt clean

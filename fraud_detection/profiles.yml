@@ -1,0 +1,12 @@
+fraud_detection:
+  outputs:
+    dev:
+      type: risingwave
+      host: "{{ env_var('RISINGWAVE_HOST', 'localhost') }}"
+      port: "{{ env_var('RISINGWAVE_PORT', '4566') | int }}"
+      user: "{{ env_var('RISINGWAVE_USER', 'root') }}"
+      password: "{{ env_var('RISINGWAVE_PASSWORD', '') }}"
+      dbname: "{{ env_var('RISINGWAVE_DB', 'dev') }}"
+      schema: public
+      threads: 1
+  target: dev

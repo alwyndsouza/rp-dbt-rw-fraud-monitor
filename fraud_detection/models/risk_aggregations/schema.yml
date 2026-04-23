@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: mv_account_risk_score_realtime
+    description: >
+      Per-account risk score (0.0–1.0) computed from 7 additive signal
+      weights capped at 1.0. Includes contributing_signals array and a
+      risk_tier label (low / medium / high / critical).
+
+  - name: mv_fraud_kpis_1min
+    description: >
+      Fraud operations KPIs aggregated per 1-minute TUMBLE window: total
+      transactions, flagged count, fraud rate %, velocity breaches, geo
+      anomalies, brute-force attempts, structuring flags, and average alert
+      confidence.
+
+  - name: mv_merchant_fraud_exposure
+    description: >
+      Per-merchant fraud exposure in rolling 1-hour windows: transaction
+      counts, flagged counts, fraud exposure percentage, and values.
+
+  - name: mv_channel_risk_breakdown
+    description: >
+      Per-channel (e.g. card_not_present, atm) fraud statistics in rolling
+      1-hour windows.
+
+  - name: mv_hourly_fraud_trend
+    description: >
+      24-hour rolling fraud trend with hourly granularity: transaction
+      counts, fraud flags, fraud rate %, and total value.
