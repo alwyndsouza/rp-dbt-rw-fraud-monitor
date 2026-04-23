@@ -84,7 +84,7 @@ services:
         cd /dbt &&
         dbt run --profiles-dir /dbt
     volumes:
-      - ./fraud_detection:/dbt:ro
+      - ./fraud_detection:/dbt
     networks:
       - fraud-net
     depends_on:
